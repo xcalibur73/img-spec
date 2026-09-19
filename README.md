@@ -4,6 +4,8 @@ Supporting web-performance & responsive asset diagnostic tool. Audits responsive
 
 Part of the [WebAudits.pro](https://webaudits.pro) technical intelligence ecosystem.
 
+![Terminal Verification](assets/terminal_preview.png)
+
 ---
 
 ## Quickstart
