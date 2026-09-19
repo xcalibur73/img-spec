@@ -3,6 +3,9 @@ Unit tests for ImgSpec image auditing, byte waste calculation, and markup genera
 """
 
 import unittest
+import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from img_spec.auditor import calculate_byte_waste, audit_lcp_candidate, audit_images
 from img_spec.markup_generator import (
     calculate_srcset_breakpoints,

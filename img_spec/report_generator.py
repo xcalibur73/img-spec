@@ -18,6 +18,24 @@ except ImportError:
     HAS_RICH = False
 
 
+def _safe_str(text: Any) -> str:
+    if not isinstance(text, str):
+        text = str(text or "")
+    text = (
+        text.replace("\u2192", "->")
+        .replace("\u2190", "<-")
+        .replace("\u2194", "<->")
+        .replace("\u2022", "*")
+        .replace("\u2019", "'")
+        .replace("\u2018", "'")
+        .replace("\u201c", '"')
+        .replace("\u201d", '"')
+        .replace("\u2014", "-")
+        .replace("\u2013", "-")
+    )
+    return text.encode("ascii", errors="replace").decode("ascii")
+
+
 def print_terminal_report(audit_result: Dict[str, Any]) -> None:
     """Print complete image audit report to terminal."""
     if not HAS_RICH:
@@ -26,7 +44,7 @@ def print_terminal_report(audit_result: Dict[str, Any]) -> None:
 
     console = Console()
 
-    url = audit_result.get("url", "")
+    url = _safe_str(audit_result.get("url", ""))
     score = audit_result.get("overall_score", 0.0)
     grade = audit_result.get("grade", "F")
     stats = audit_result.get("stats", {})
@@ -77,7 +95,7 @@ def print_terminal_report(audit_result: Dict[str, Any]) -> None:
         if lcp.get("defects"):
             lcp_text.append("\nDetected Priority Defects:\n", style="bold red")
             for d in lcp["defects"]:
-                lcp_text.append(f" - {d}\n", style="red")
+                lcp_text.append(f" - {_safe_str(d)}\n", style="red")
 
         console.print(Panel(lcp_text, border_style="yellow" if lcp.get("lcp_score") < 80 else "green"))
 
@@ -104,7 +122,7 @@ def print_terminal_report(audit_result: Dict[str, Any]) -> None:
 
             img_table.add_row(
                 str(img.get("index")),
-                img.get("src", ""),
+                _safe_str(img.get("src", "")),
                 img.get("natural_dimensions", "-"),
                 img.get("rendered_dimensions", "-"),
                 waste_str,
@@ -134,7 +152,7 @@ def print_terminal_report(audit_result: Dict[str, Any]) -> None:
         rec_table.add_column("Priority", justify="center", style="dim")
         rec_table.add_column("Actionable Engineering Fix", style="white")
         for i, r in enumerate(recs, 1):
-            rec_table.add_row(str(i), r)
+            rec_table.add_row(str(i), _safe_str(r))
         console.print(rec_table)
 
     console.print()

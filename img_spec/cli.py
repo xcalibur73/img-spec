@@ -23,13 +23,21 @@ def run_audit(url: str, fast: bool = False, viewport: str = "iphone_se") -> dict
 
 
 def main():
+    from img_spec import __version__
     parser = argparse.ArgumentParser(
+        prog="img-spec",
         description="ImgSpec: Responsive Viewport Breakpoint & LCP Image Auditor",
         epilog="Example: python run.py https://webaudits.pro",
     )
     parser.add_argument(
         "url",
+        nargs="?",
         help="Target URL to audit for image performance and LCP priority.",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"ImgSpec v{__version__}",
     )
     parser.add_argument(
         "--fast",
@@ -56,6 +64,9 @@ def main():
     )
 
     args = parser.parse_args()
+    if not args.url:
+        parser.print_help()
+        return 0
 
     target_url = args.url.strip()
     if not target_url.startswith("http://") and not target_url.startswith("https://"):
