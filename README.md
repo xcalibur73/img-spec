@@ -1,8 +1,8 @@
 # ImgSpec
 
-Responsive viewport breakpoint and Largest Contentful Paint (LCP) image auditor.
+Supporting web-performance & responsive asset diagnostic tool. Audits responsive image breakpoints, pixel waste, and Largest Contentful Paint (LCP) efficiency.
 
-Part of the [WebAudits.pro](https://webaudits.pro) technical intelligence platform.
+Part of the [WebAudits.pro](https://webaudits.pro) technical intelligence ecosystem.
 
 ---
 
