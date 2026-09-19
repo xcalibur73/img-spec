@@ -1,12 +1,12 @@
-# ImgSpec: Empirical 12-Site Mobile Viewport & LCP Image Benchmark
+# ImgSpec: 12-Site Mobile Viewport & LCP Image Study
 
-Evaluation of responsive image optimization, mobile pixel waste, and Largest Contentful Paint (LCP) priority delivery across 12 production websites gathered while beta testing on random sites.
+Evaluation of responsive image optimization, mobile pixel waste, and Largest Contentful Paint (LCP) priority delivery across 12 production websites gathered during local testing.
 
 ---
 
 ## Methodology
 
-Evaluated while beta testing on random sites using ImgSpec v1.0.0. Audits evaluated:
+Evaluated using ImgSpec v1.0.0. Audits measured:
 1. Viewport emulation across mobile (375px iPhone SE, DPR 2) and desktop (1440px) breakpoints.
 2. LCP image candidate detection and Core Web Vitals priority hints (`fetchpriority="high"`, `loading="eager"` vs `"lazy"`, asynchronous decode).
 3. Pixel waste calculation comparing intrinsic downloaded pixels against effective rendered display pixels (`naturalWidth * naturalHeight` vs `renderedWidth * renderedHeight * dpr^2`).
@@ -36,19 +36,19 @@ Testing environment: Python 3.10, Headless Chromium, 2026-09-19.
 
 ---
 
-## Key Engineering Findings
+## Key Engineering Observations
 
-### 1. The Mobile Byte Waste Tax Remains Severe in Publishing
-On high-density media and publishing homepages (`nytimes.com`, `cnn.com`, `theverge.com`), an average of 58.4% of all downloaded image pixels are completely discarded during mobile rendering. Desktop hero images exceeding 1600px width are delivered to 375px mobile viewports without responsive downsampling, forcing mobile browsers to execute costly image downscaling and wasting 350KB to 900KB of network payload per page view.
+### 1. Mobile Byte Waste in Media Properties
+On surveyed publishing homepages (`nytimes.com`, `cnn.com`, `theverge.com`), an average of 58.4% of downloaded image pixels were discarded during mobile rendering. Desktop hero images exceeding 1600px width were delivered to 375px mobile viewports without responsive downsampling, forcing mobile browsers to execute client downscaling.
 
 ### 2. The Site-Wide Lazy-Loading Anti-Pattern
-25.0% of surveyed production domains inadvertently apply `loading="lazy"` to their above-the-fold LCP hero images. Because browsers delay loading lazy images until layout calculation confirms viewport intersection, this anti-pattern introduces 800ms to 1,400ms of avoidable delay to mobile Largest Contentful Paint (LCP).
+25.0% of surveyed production domains applied `loading="lazy"` to their above-the-fold LCP hero images. Because browsers delay loading lazy images until layout calculation confirms viewport intersection, this introduced avoidable delay to mobile Largest Contentful Paint (LCP).
 
 ### 3. Missing fetchpriority="high" on LCP Candidates
-58.3% of surveyed domains omit the `fetchpriority="high"` attribute on their primary hero image. Without this priority hint, the browser schedules image downloads at `Low` priority while waiting for stylesheets, scripts, and font files to finish downloading, severely delaying the LCP timestamp.
+58.3% of surveyed domains omitted the `fetchpriority="high"` attribute on their primary hero image. Without this priority hint, the browser schedules image downloads at lower priority while waiting for stylesheets and fonts to finish downloading.
 
 ### 4. Format Modernity Disparity
-Developer-focused platforms (`webaudits.pro`, `web.dev`, `nextjs.org`) demonstrate over 80% adoption of next-gen formats (AVIF and WebP). In contrast, commercial media properties still serve over 50% of image assets in legacy JPEG or uncompressed PNG format, inflating overall page weight by 35% to 60%.
+Developer-focused platforms (`webaudits.pro`, `web.dev`, `nextjs.org`) demonstrated over 80% adoption of next-gen formats (AVIF and WebP). In contrast, commercial media properties still served over 50% of image assets in legacy JPEG or uncompressed PNG format.
 
-### 5. CLS Geometry Locking is Becoming Standard
-83.3% of surveyed sites provide explicit `width` and `height` attributes or CSS aspect-ratio locks on their primary content images, successfully preventing Cumulative Layout Shift during visual render.
+### 5. CLS Geometry Locking Adoption
+83.3% of surveyed sites provided explicit `width` and `height` attributes or CSS aspect-ratio locks on their primary content images, preventing Cumulative Layout Shift during visual render.
