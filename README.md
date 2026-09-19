@@ -1,172 +1,208 @@
 # ImgSpec
 
-Responsive Viewport Breakpoint & LCP Image Auditor
+Responsive viewport breakpoint and Largest Contentful Paint (LCP) image auditor.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python: 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
-[![Status: Production](https://img.shields.io/badge/status-production-success.svg)](#)
-[![Cloud Engine: WebAudits.pro](https://img.shields.io/badge/cloud-webaudits.pro-orange.svg)](https://webaudits.pro/tools/img-spec)
-
-ImgSpec is a command-line utility and headless Chromium diagnostic engine that audits image delivery across mobile and desktop viewports. It isolates oversized image payloads, misconfigured responsive breakpoints, and Largest Contentful Paint (LCP) priority defects before they degrade Core Web Vitals.
-
-Key capabilities:
-- Native multi-viewport emulation across 5 responsive breakpoints: 320px (compact), 375px (iPhone SE), 390px (iPhone 14/15), 768px (iPad), and 1440px (Desktop).
-- LCP image candidate detection: evaluates above-the-fold paint areas and identifies the dominant viewport image element.
-- Core Web Vitals priority audit: flags missing `fetchpriority="high"`, render-blocking script interference, and anti-patterns like `loading="lazy"` on above-the-fold hero images.
-- Byte waste ratio calculation: compares intrinsic image file dimensions against rendered display dimensions (`naturalWidth` vs `renderedWidth * dpr`).
-- Layout shift protection check: verifies explicit `width` and `height` attributes or CSS `aspect-ratio` to enforce 0.00 CLS.
-- Modern format evaluation: audits WebP and AVIF adoption vs legacy uncompressed JPEG and PNG assets.
-- Automated responsive code generator: outputs drop-in `<picture>` elements with calculated `srcset` breakpoints and exact `sizes` queries.
-- Multi-format output: high-contrast terminal tables, Markdown audit reports, and JSON pipelines.
+Part of the [WebAudits.pro](https://webaudits.pro) technical intelligence platform.
 
 ---
 
-## The Engineering Problem
+## What it does
 
-Images account for over 50% of total page weight on the modern web and represent the primary bottleneck in mobile Core Web Vitals audits:
+ImgSpec audits image asset delivery, responsive viewport adaptation, and Largest Contentful Paint (LCP) performance. It inspects:
+- Pixel waste ratios by comparing intrinsic image dimensions against rendered CSS display dimensions across viewports.
+- Largest Contentful Paint (LCP) hero image priority, detecting anti-patterns such as `loading="lazy"` on hero images or missing `fetchpriority="high"`.
+- Modern image format adoption (AVIF, WebP vs. legacy JPEG, PNG).
+- Layout shift protection (explicit `width` and `height` attributes or CSS aspect ratios preventing Cumulative Layout Shift).
+- Generates drop-in, zero-CLS responsive `<picture>` and `<source srcset>` HTML markup tailored to measured breakpoints.
 
-1. Viewport Over-Serving: A desktop hero image (1920x1080, 450KB) is served unchanged to a mobile browser (375x211 rendered display area). The device downloads 90% wasted pixel data, burning mobile cellular bandwidth and delaying LCP.
-2. The Lazy-Load LCP Anti-Pattern: Content management systems and developers frequently apply `loading="lazy"` site-wide. When applied to the LCP hero image, the browser delays fetching until layout calculation completes, adding 800ms to 1,400ms of unnecessary render delay.
-3. Missing Priority Hints: Without `fetchpriority="high"`, the browser discovers the hero image only after parsing surrounding CSS stylesheets and font files. Preloading or priority hinting allows the network request to start concurrently with HTML parsing.
-4. Cumulative Layout Shift (CLS): Images lacking explicit `width` and `height` attributes cause surrounding content to jump vertically when pixels render, directly degrading CLS scores.
-5. Inaccurate Sizes Queries: Using generic strings like `sizes="100vw"` on content constrained to max-width containers causes browsers to download desktop-resolution assets even on mobile displays.
+---
+
+## Why it exists
+
+Images remain the single largest contributor to mobile Largest Contentful Paint (LCP) failures. Sites frequently:
+- Serve 2,400px desktop hero images to 375px mobile viewports due to missing `srcset` attributes or improper `sizes` declarations (such as `sizes="100vw"` instead of responsive clamps).
+- Apply blanket `loading="lazy"` across all images, artificially delaying the hero element until after client-side hydration and scroll calculation.
+- Omit explicit aspect ratios, triggering layout recalculations that degrade Core Web Vitals scores.
+
+ImgSpec isolates image bloat across real viewports and generates optimized responsive replacement markup.
+
+---
+
+## Key features
+
+- **Multi-Viewport Emulation:** Inspects images across 5 calibrated responsive viewports: 320px (compact), 375px (iPhone SE), 390px (iPhone 14/15), 768px (iPad/tablet), and 1440px (desktop).
+- **LCP Candidate Detection:** Automatically locates the largest visual element in the viewport and audits its priority headers and decoding attributes.
+- **Pixel Waste Calculation:** Measures exact mathematical wasted pixel area and byte overhead resulting from oversized asset delivery.
+- **Responsive Markup Synthesis:** Generates complete drop-in `<picture>` tags with AVIF/WebP MIME type negotiation and fluid `sizes` queries.
+- **Fast Static Fallback:** Supports an optional HTTP-only inspection mode for high-throughput headless scans.
+
+---
+
+## Architecture
+
+```text
+[Target URL + Viewport Parameter]
+               |
+               v
+     [Chromium CDP Engine]
+               |
+               +---> Viewport Emulation & Layout Settlement
+               +---> DOM Image Node Discovery (img, picture, background-image)
+               +---> LCP Candidate Detection & Metric Capture
+               |
+               v
+      [Image Auditor Engine]
+               |
+               +---> Intrinsic vs. Rendered Dimension Comparison
+               +---> Pixel Waste Calculation
+               +---> Priority & Anti-Pattern Audit (lazy hero, missing fetchpriority)
+               +---> CLS Dimension Verification
+               |
+               v
+   [Markup & Report Generator]
+               |
+               +---> Drop-in Responsive <picture> Element
+               +---> Terminal Report / Markdown / JSON Pipeline Output
+```
+
+ImgSpec executes three primary modules:
+1. `inspector.py`: Manages CDP browser sessions, emulates screen metrics, captures image natural and client dimensions, and flags LCP candidates.
+2. `auditor.py`: Evaluates pixel waste, format modernity, layout shift protections, and computes the 5-component optimization score.
+3. `markup_generator.py`: Synthesizes production-ready responsive picture tags using mathematical aspect ratio preservation and optimal breakpoints.
 
 ---
 
 ## Installation
 
+### Prerequisites
+- Python 3.10 or higher
+- Google Chrome or Chromium installed and available in system PATH
+
+### Install from Source
 ```bash
 git clone https://github.com/xcalibur73/img-spec.git
 cd img-spec
 pip install -r requirements.txt
+pip install -e .
 ```
-
-### System Requirements
-- Python 3.10 or higher.
-- Optional: Google Chrome, Chromium, or Microsoft Edge installed for full CDP headless emulation. When no browser binary is detected, ImgSpec automatically switches to fast HTTP analysis mode.
 
 ---
 
 ## Usage
 
-### Audit a Live URL Across All 5 Viewports
+### Basic CLI Invocation
 ```bash
-python run.py https://webaudits.pro
-```
+# Audit images on a target URL with default iPhone SE viewport (375px)
+img-spec https://webaudits.pro
 
-### Fast HTTP-Only Analysis Mode
-```bash
-python run.py https://example.com --fast
-```
+# Audit using a specific viewport breakpoint
+img-spec https://example.com --viewport tablet
 
-### Audit Specific Viewport
-```bash
-python run.py https://example.com --viewport iphone_se
-```
+# Fast static inspection mode (skips headless browser)
+img-spec https://example.com --fast
 
-Supported viewports:
-- `compact`: 320 x 568 (DPR 2)
-- `iphone_se`: 375 x 667 (DPR 2)
-- `iphone_standard`: 390 x 844 (DPR 3)
-- `tablet`: 768 x 1024 (DPR 2)
-- `desktop`: 1440 x 900 (DPR 1)
+# Export JSON report for CI/CD asset verification
+img-spec https://example.com --output json --save img-report.json
 
-### Export Markdown Audit Report
-```bash
-python run.py https://example.com --output markdown --save IMAGE-AUDIT.md
-```
-
-### Export Machine-Readable JSON for CI/CD Pipelines
-```bash
-python run.py https://example.com --output json --save audit.json
+# Check installed version
+img-spec --version
 ```
 
 ---
 
-## Web Platform Integration (WebAudits.pro)
+## Example output
 
-To run hosted audits without installing local Python or Chromium binaries:
-- Interactive web tool: [WebAudits.pro/tools/img-spec](https://webaudits.pro/tools/img-spec)
-- Automated multi-viewport rendering and responsive code generator.
+```text
++-------------------------------------------------------------------------------+
+| ImgSpec: Responsive Viewport Breakpoint & LCP Image Auditor                   |
+| Target URL: https://webaudits.pro                                             |
+| Image Optimization Score: 100.0/100 (Grade: A)                                |
+| Mode: cdp_headless | Discovered Images: 6 | Oversized: 0 | Avg Pixel Waste: 0% |
++-------------------------------------------------------------------------------+
 
----
+Largest Contentful Paint (LCP) Candidate:
+- Asset: /hero-banner.webp
+- Verdict: PASS (LCP Score: 100.0/100)
+- Loading: eager | FetchPriority: high | Modern Format: True
 
-## Scoring Model
-
-ImgSpec generates an overall Image Optimization Score (0-100) and letter grade:
-
-| Component | Weight | Criteria & Measurement |
-|:---|:---:|:---|
-| LCP Priority & Timing | 35% | `fetchpriority="high"` present, `loading="lazy"` absent on hero, decode eager |
-| Byte Waste Efficiency | 25% | Ratio of intrinsic downloaded pixels to rendered display pixels |
-| Format Modernity | 20% | Adoption of AVIF and WebP formats over legacy JPEG/PNG |
-| Layout Shift Protection | 10% | Presence of explicit `width`, `height`, or CSS `aspect-ratio` |
-| Responsive Srcset Coverage | 10% | Presence of calibrated `srcset` and `sizes` attributes |
-
-### Grade Scale
-- **A**: Score >= 90 (Optimal Core Web Vitals delivery)
-- **B**: Score >= 75 (Good performance, minor byte waste)
-- **C**: Score >= 60 (Noticeable mobile LCP delay)
-- **D**: Score >= 40 (Severe byte waste and lazy-loaded hero)
-- **F**: Score < 40 (Unoptimized legacy images blocking LCP)
-
----
-
-## Generated Code Output Example
-
-When ImgSpec diagnoses an oversized hero image, it outputs drop-in responsive markup:
-
-```html
-<picture>
-  <!-- Modern AVIF source with mobile, tablet, and desktop breakpoints -->
-  <source
-    type="image/avif"
-    srcset="/images/hero-360.avif 360w, /images/hero-720.avif 720w, /images/hero-1080.avif 1080w, /images/hero-1440.avif 1440w"
-    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 1200px"
-  />
-  <!-- WebP fallback for older browser engines -->
-  <source
-    type="image/webp"
-    srcset="/images/hero-360.webp 360w, /images/hero-720.webp 720w, /images/hero-1080.webp 1080w, /images/hero-1440.webp 1440w"
-    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 1200px"
-  />
-  <!-- Fallback img element with LCP priority and layout shift locks -->
-  <img
-    src="/images/hero-1080.jpg"
-    alt="Descriptive keyword-rich image description"
-    width="1200"
-    height="675"
-    fetchpriority="high"
-    loading="eager"
-    decoding="async"
-  />
-</picture>
+Discovered Image Assets & Viewport Efficiency:
++---+----------------------+-----------+----------+-------------+--------+----------+----------+
+| # | Asset Source         | Intrinsic | Rendered | Pixel Waste | Format | CLS Lock | Role     |
++---+----------------------+-----------+----------+-------------+--------+----------+----------+
+| 1 | /hero-banner.webp    | 750x422   | 375x211  | 0.0%        | Modern | Yes      | LCP HERO |
+| 2 | /logo.svg            | 180x40    | 180x40   | 0.0%        | Modern | Yes      | Content  |
++---+----------------------+-----------+----------+-------------+--------+----------+----------+
 ```
 
 ---
 
-## Running Unit Tests
+## Benchmark / methodology
+
+### Empirical 12-Site Viewport & LCP Study
+- **Dataset:** 12 production web properties across editorial media, e-commerce, and SaaS landing pages.
+- **Command Used:** `python run.py <url> --viewport iphone_se --output json`
+- **Tool Version:** ImgSpec v1.0.0
+- **Environment:** Windows 11, Chromium 128.0, Python 3.12, unthrottled fiber network.
+- **Calculation Formula:**
+  - Intrinsic pixel area: `naturalWidth * naturalHeight`
+  - Rendered display area: `(clientWidth * dpr) * (clientHeight * dpr)`
+  - Pixel waste percentage: `max(0, (intrinsic_area - rendered_area) / intrinsic_area) * 100`
+- **Results:**
+  - 58.4% of downloaded image pixels were discarded on mobile viewports due to desktop-sized hero images served without `srcset` breakpoints.
+  - Complete study dataset: [BENCHMARKS.md](BENCHMARKS.md).
+
+---
+
+## Limitations
+
+- **Geometric Waste Approximation:** Pixel waste calculations assume standard bitmap images (JPEG, PNG, WebP, AVIF). Vector formats (SVG) are not penalized for high intrinsic viewBox dimensions.
+- **CDN Dynamic Negotiation:** ImgSpec evaluates the asset delivered to the emulated browser session. CDNs utilizing `Client Hints` (`Sec-CH-DPR`, `Sec-CH-Width`) may adapt responses differently if headers are stripped by intermediary proxies.
+- **Local Network Timings:** Measures in-browser decode timing; it does not measure network round-trip time (RTT) from edge caches in different geographic regions.
+
+---
+
+## Accuracy / standards
+
+ImgSpec evaluates image performance against official web standards and geometric formulas:
+
+| Metric / Check | Classification | Authority / Standard |
+|:---|:---|:---|
+| Fetch Priority (`fetchpriority`) | Web Standard | W3C HTML Priority Hints |
+| Lazy Loading (`loading="lazy"`) | Web Standard | HTML Living Standard (WHATWG) |
+| Modern Format Negotiation | Web Standard | W3C / IETF MIME Types (AVIF, WebP) |
+| Layout Shift Prevention (CLS) | Google / Web Standard | Google Web Vitals Specification |
+| Pixel Waste Ratio | Project-Derived Heuristic | Geometric rendered area differential |
+| Composite Image Score | Project-Derived Heuristic | 5-factor weighted efficiency formula |
+
+---
+
+## Testing
+
+ImgSpec includes unit tests covering viewport emulation, pixel waste calculation, LCP hero detection, and markup generation:
 
 ```bash
-python -m unittest discover tests/
+# Run unit test suite
+python -m unittest discover -s tests
+
+# Test execution output
+# Ran 11 tests in 0.000s
+# OK
 ```
+
+Continuous integration runs automatically across Linux and Windows runners via GitHub Actions.
 
 ---
 
-## Author
+## Roadmap
 
-Maintained by [@xcalibur73](https://github.com/xcalibur73), creator of [WebAudits.pro](https://webaudits.pro).
-
-Part of a technical SEO engineering tooling suite:
-1. [img-spec](https://github.com/xcalibur73/img-spec): Responsive viewport breakpoint and LCP image auditor.
-2. [schema-graph](https://github.com/xcalibur73/schema-graph): Cross-page entity and knowledge graph integrity tracer.
-3. [dom-hydrate](https://github.com/xcalibur73/dom-hydrate): Headless Chromium SSR vs CSR DOM diff engine.
-4. [citation-pulse](https://github.com/xcalibur73/citation-pulse): GEO and AI search citability benchmark engine.
-5. [index-trace](https://github.com/xcalibur73/index-trace): Search Console emergency triage and crawler collision tracer.
-6. [overflow-trace](https://github.com/xcalibur73/overflow-trace): Mobile viewport horizontal overflow tracer.
+- [x] Initial release with CDP 5-viewport emulation and responsive markup generator.
+- [x] PEP 621 packaging, CLI `--version`, and Windows cp1252 encoding safety.
+- [ ] Direct automated image compression and AVIF/WebP generation via Pillow.
+- [ ] CSS `background-image` responsive `image-set()` resolution.
+- [ ] WebAudits.pro continuous LCP regression monitoring.
 
 ---
 
 ## License
 
-Licensed under the [MIT License](LICENSE).
+MIT License. See [LICENSE](LICENSE) for full details.
