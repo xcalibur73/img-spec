@@ -16,7 +16,7 @@ from img_spec.browser import ChromeRunner, CDPClient, IMAGE_EXTRACTION_SCRIPT, f
 
 
 def is_modern_format(url_or_mime: str) -> bool:
-    """Check if image uses modern AVIF, WebP, or SVG format."""
+    """Check if image uses modern AVIF, WebP, SVG format, or auto-format image CDN."""
     lower = url_or_mime.lower()
     return (
         "image/avif" in lower
@@ -28,6 +28,23 @@ def is_modern_format(url_or_mime: str) -> bool:
         or ".avif?" in lower
         or ".webp?" in lower
         or ".svg?" in lower
+        or "/_next/image" in lower
+        or "res.cloudinary.com" in lower
+        or "cloudinary" in lower
+        or ".imgix.net" in lower
+        or "images.unsplash.com" in lower
+        or "cdn-cgi/image/" in lower
+        or ".imagekit.io" in lower
+        or ".twicpics.com" in lower
+        or "f_auto" in lower
+        or "auto=format" in lower
+        or "format=webp" in lower
+        or "format=avif" in lower
+        or "fm=webp" in lower
+        or "fm=avif" in lower
+        or "output=webp" in lower
+        or "shopify.com" in lower
+        or "wixstatic.com" in lower
     )
 
 
