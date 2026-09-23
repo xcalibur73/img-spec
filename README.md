@@ -5,8 +5,9 @@
 
 
 Supporting web-performance & responsive asset diagnostic tool. Audits responsive image breakpoints, pixel waste, and Largest Contentful Paint (LCP) efficiency.
-
 Part of the [WebAudits.pro](https://webaudits.pro) technical intelligence ecosystem.
+
+> **Interactive Web Tool**: Run live responsive image and LCP breakpoint audits directly in your browser at [webaudits.pro/tools/img-spec](https://webaudits.pro/tools/img-spec).
 
 ![Terminal Verification](assets/terminal_preview.png)
 

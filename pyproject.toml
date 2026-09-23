@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "img-spec"
-version = "1.0.0"
+version = "1.0.2"
 description = "Responsive viewport breakpoint and Largest Contentful Paint (LCP) image auditor"
 readme = "README.md"
 authors = [
